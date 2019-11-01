@@ -52,6 +52,10 @@ public class XPathParser {
   private Properties variables;
   private XPath xpath;
 
+  // region 构造函数
+
+  // 每个构造方法都是先调用 commonConstructor() 方法，然后用 createDocument() 方法为 this.document 设置值
+
   public XPathParser(String xml) {
     commonConstructor(false, null, null);
     this.document = createDocument(new InputSource(new StringReader(xml)));
@@ -132,9 +136,58 @@ public class XPathParser {
     this.document = document;
   }
 
+  private Document createDocument(InputSource inputSource) {
+    // important: this must only be called AFTER common constructor
+    try {
+      DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+      factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+      factory.setValidating(validation);
+
+      factory.setNamespaceAware(false);
+      factory.setIgnoringComments(true);
+      factory.setIgnoringElementContentWhitespace(false);
+      factory.setCoalescing(false);
+      factory.setExpandEntityReferences(true);
+
+      DocumentBuilder builder = factory.newDocumentBuilder();
+      builder.setEntityResolver(entityResolver);
+      builder.setErrorHandler(new ErrorHandler() {
+        @Override
+        public void error(SAXParseException exception) throws SAXException {
+          throw exception;
+        }
+
+        @Override
+        public void fatalError(SAXParseException exception) throws SAXException {
+          throw exception;
+        }
+
+        @Override
+        public void warning(SAXParseException exception) throws SAXException {
+          // NOP
+        }
+      });
+      return builder.parse(inputSource);
+    } catch (Exception e) {
+      throw new BuilderException("Error creating document instance.  Cause: " + e, e);
+    }
+  }
+
+  private void commonConstructor(boolean validation, Properties variables, EntityResolver entityResolver) {
+    this.validation = validation;
+    this.entityResolver = entityResolver;
+    this.variables = variables;
+    XPathFactory factory = XPathFactory.newInstance();
+    this.xpath = factory.newXPath();
+  }
+
+  // endregion
+
   public void setVariables(Properties variables) {
     this.variables = variables;
   }
+
+  // region eval 方法
 
   public String evalString(String expression) {
     return evalString(document, expression);
@@ -227,49 +280,6 @@ public class XPathParser {
     }
   }
 
-  private Document createDocument(InputSource inputSource) {
-    // important: this must only be called AFTER common constructor
-    try {
-      DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-      factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-      factory.setValidating(validation);
-
-      factory.setNamespaceAware(false);
-      factory.setIgnoringComments(true);
-      factory.setIgnoringElementContentWhitespace(false);
-      factory.setCoalescing(false);
-      factory.setExpandEntityReferences(true);
-
-      DocumentBuilder builder = factory.newDocumentBuilder();
-      builder.setEntityResolver(entityResolver);
-      builder.setErrorHandler(new ErrorHandler() {
-        @Override
-        public void error(SAXParseException exception) throws SAXException {
-          throw exception;
-        }
-
-        @Override
-        public void fatalError(SAXParseException exception) throws SAXException {
-          throw exception;
-        }
-
-        @Override
-        public void warning(SAXParseException exception) throws SAXException {
-          // NOP
-        }
-      });
-      return builder.parse(inputSource);
-    } catch (Exception e) {
-      throw new BuilderException("Error creating document instance.  Cause: " + e, e);
-    }
-  }
-
-  private void commonConstructor(boolean validation, Properties variables, EntityResolver entityResolver) {
-    this.validation = validation;
-    this.entityResolver = entityResolver;
-    this.variables = variables;
-    XPathFactory factory = XPathFactory.newInstance();
-    this.xpath = factory.newXPath();
-  }
+  // endregion
 
 }
