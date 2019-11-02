@@ -30,6 +30,12 @@ public class GenericTokenParser {
     this.handler = handler;
   }
 
+  /*
+   * 去看看 GenericTokenParserTest 的代码，更容易读懂下面的代码
+   * 对于这样的一个语句 ${first_name} ${initial} ${last_name} reporting.
+   * openToken 是 ${ ，closeToken 是 }，openToken 和 closeToken 之间的语句叫做 expression
+   * 找到 expression 后，交给 handler，把 expression 转成实际的值
+   */
   public String parse(String text) {
     if (text == null || text.isEmpty()) {
       return "";
@@ -40,11 +46,13 @@ public class GenericTokenParser {
       return text;
     }
     char[] src = text.toCharArray();
+    // offset 之前的东西都是处理过的，offset 之后的字符串是待处理的
     int offset = 0;
     final StringBuilder builder = new StringBuilder();
     StringBuilder expression = null;
     while (start > -1) {
       if (start > 0 && src[start - 1] == '\\') {
+        // 如果在 openToken 之前有反斜杠做转义，那么忽略这个 openToken
         // this open token is escaped. remove the backslash and continue.
         builder.append(src, offset, start - offset - 1).append(openToken);
         offset = start + openToken.length();
@@ -60,6 +68,7 @@ public class GenericTokenParser {
         int end = text.indexOf(closeToken, offset);
         while (end > -1) {
           if (end > offset && src[end - 1] == '\\') {
+            // 同样，如果 closeToken 被转义了，那么接着搜索
             // this close token is escaped. remove the backslash and continue.
             expression.append(src, offset, end - offset - 1).append(closeToken);
             offset = end + closeToken.length();
