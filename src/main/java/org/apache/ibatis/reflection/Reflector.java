@@ -49,15 +49,32 @@ import org.apache.ibatis.reflection.property.PropertyNamer;
  */
 public class Reflector {
 
+  // 对应的类型
   private final Class<?> type;
+
+  // 可读属性类型，就是那些有 getter 方法的属性，即使对应的属性并不存在，也认为这个属性是存在的
+  // 例如类中有方法 public String getA()，即使没有 private String a 这个成员变量，但是也认为 a 成员变量存在，并放入这个数组
   private final String[] readablePropertyNames;
+
+  // 可写属性类型，即有 setter 方法的属性，类似于上面
   private final String[] writablePropertyNames;
+
+  // setter 方法集合。键是上面的属性名称
   private final Map<String, Invoker> setMethods = new HashMap<>();
+
+  // getter 方法集合
   private final Map<String, Invoker> getMethods = new HashMap<>();
+
+  // setter 方法的参数类型
   private final Map<String, Class<?>> setTypes = new HashMap<>();
+
+  // getter 方法的返回类型
   private final Map<String, Class<?>> getTypes = new HashMap<>();
+
+  // 默认构造方法
   private Constructor<?> defaultConstructor;
 
+  // 记录了所有的属性的名称的集合。键是属性的所有字母大写形式，值是属性
   private Map<String, String> caseInsensitivePropertyMap = new HashMap<>();
 
   public Reflector(Class<?> clazz) {
@@ -76,12 +93,21 @@ public class Reflector {
     }
   }
 
+  // 找到默认构造方法，即参数数量是 0 的构造方法
   private void addDefaultConstructor(Class<?> clazz) {
     Constructor<?>[] constructors = clazz.getDeclaredConstructors();
     Arrays.stream(constructors).filter(constructor -> constructor.getParameterTypes().length == 0)
       .findAny().ifPresent(constructor -> this.defaultConstructor = constructor);
   }
 
+  /*
+   * 找到类中的所有 getter 方法
+   * getter 方法是指以方法名以 get 或 is 开头且不仅仅包含 get 和 is、没有任何参数的方法
+   * 私有方法、父类中的方法、实现的接口中的方法，只要满足上面的条件，就算 getter 方法
+   * 如果一个属性名对应多个 getter 方法，那么需要从中找出合适的方法
+   *
+   * 我有一个疑问：为什么 private 方法也要算成是 getter 方法，为什么要 private 成员变量放入 readablePropertyNames 中？实际上它是不可读的呀
+   */
   private void addGetMethods(Class<?> clazz) {
     Map<String, List<Method>> conflictingGetters = new HashMap<>();
     Method[] methods = getClassMethods(clazz);
@@ -262,6 +288,7 @@ public class Reflector {
     return !(name.startsWith("$") || "serialVersionUID".equals(name) || "class".equals(name));
   }
 
+  // 获取所有的方法，包括 private 方法
   /**
    * This method returns an array containing all methods
    * declared in this class and any superclass.

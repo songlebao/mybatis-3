@@ -48,6 +48,7 @@ public final class PropertyNamer {
     return isGetter(name) || isSetter(name);
   }
 
+  // 仅仅通过方法的名称来判断方法是不是 getter 方法。判断依据是方法名称以 get 或 is 开头，且还有其他字母
   public static boolean isGetter(String name) {
     return (name.startsWith("get") && name.length() > 3) || (name.startsWith("is") && name.length() > 2);
   }
